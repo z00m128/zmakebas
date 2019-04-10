@@ -36,7 +36,7 @@ clean:
 
 # The stuff below makes the distribution tgz.
 
-VERS=1.1
+VERS=1.2
 
 dist: tgz
 tgz: ../zmakebas-$(VERS).tar.gz

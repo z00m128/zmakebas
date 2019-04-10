@@ -528,10 +528,10 @@ static unsigned char buf[2048],lcasebuf[2048],outbuf[4096];
 #endif
 int f,toknum,toklen,linenum,linelen,in_quotes,in_rem,lastline;
 char **tarrptr;
-unsigned char *ptr,*ptr2,*linestart,*outptr,*remptr,*fileptr;
+unsigned char *ptr,*ptr2,*linestart,*outptr,*remptr,*fileptr,*asciiptr;
 double num;
 int num_exp;
-unsigned long num_mantissa;
+unsigned long num_mantissa,num_ascii;
 int textlinenum;
 int chk=0;
 int alttok;
@@ -849,7 +849,7 @@ do
       
       if(*ptr==REM_TOKEN_NUM) in_rem=1;
       
-      if(!in_rem && *ptr=='\\')
+      if(*ptr=='\\')
         {
         if(isalpha(ptr[1]) && strchr("VWXYZvwxyz",ptr[1])==NULL)
           *outptr++=144+tolower(ptr[1])-'a';
@@ -862,6 +862,31 @@ do
             case '\'': case '.': case ':': case ' ': /* block graphics char */
               *outptr++=grok_block(ptr,textlinenum);
               ptr++;
+              break;
+            case '{': /* directly specify output code */
+              /* find end of number */
+              asciiptr=strchr(ptr+2,'}');
+              if(asciiptr==NULL)
+                {
+                fprintf(stderr,
+                  "line %d: unclosed brace in eight-bit character code\n",
+                        textlinenum);
+                exit(1);
+                }
+              /* parse number in decimal, octal or hex */
+              num_ascii=strtoul(ptr+2, NULL, 0);
+              if(num_ascii<0 || num_ascii>255)
+                {
+                fprintf(stderr,
+                  "line %d: eight-bit character code out of range\n",
+                        textlinenum);
+                exit(1);
+                }
+              *outptr++=(char)num_ascii;
+              /* set pointer to the second char from the end, so we're in the
+               * right place when we skip forward two chars below
+               */
+              ptr=asciiptr-1;
               break;
             default:
               fprintf(stderr,

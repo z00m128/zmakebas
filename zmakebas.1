@@ -5,7 +5,7 @@
 .\"
 .\" zmakebas.1 - man page
 .\"
-.TH zmakebas 1 "3rd November, 2000" "Version 1.1" "Retrocomputing Tools"
+.TH zmakebas 1 "1st May, 2004" "Version 1.2" "Retrocomputing Tools"
 .\"
 .\"------------------------------------------------------------------
 .\"
@@ -123,10 +123,14 @@ though); both upper and lowercase work. To get the copyright symbol,
 follow it with `*'. To get a block graphics character, follow it with
 a two-character `drawing' of it using spaces, dots, apostrophes and/or
 colons. (For example, you'd get character 135 with `\\':', and
-character 142 with `\\:.'.) To get a literal `@', follow it
-with `@'. (This is needed only if the `-l' option was given, but works
-whether it was or not.) Finally, as usual with such things, you can
-get a literal backslash by following the first backslash with another.
+character 142 with `\\:.'.) To get a literal `@', follow it with `@'.
+(This is needed only if the `-l' option was given, but works whether
+it was or not.) To specify a literal eight-bit character code to dump
+into the Basic output file directly (to use for embedded colour
+control codes and the like), use braces and a C-syntax number e.g.
+`\\{42}' for decimal, and `\\{0x42}' for hex. Finally, as usual with
+such things, you can get a literal backslash by following the first
+backslash with another.
 .PP
 If the `-l' option was given, line numbers must be omitted. Instead
 these are automatically generated in the output, and you can use
@@ -223,6 +227,7 @@ least I can be bothered to capitalise the thing, right? :-)
 .\"------------------------------------------------------------------
 .\"
 .SH "SEE ALSO"
+.IR fuse "(1),"
 .IR xz80 "(1),"
 .IR xzx "(1)"
 .\"
