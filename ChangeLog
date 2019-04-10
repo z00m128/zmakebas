@@ -1,0 +1,8 @@
+2000-11-03  Russell Marks  <russell.marks@ntlworld.com>
+
+	* Version 1.1.
+
+	* zmakebas.1: minor fixes.
+
+	* Cleaned things up a little, made installation saner, added
+	uninstall target, and updated contact details.
