@@ -151,9 +151,12 @@ char infile[1024],outfile[1024];
 #define MAX_LABEL_LEN	16
 
 /* this is needed for tap files too: */
-unsigned char headerbuf[17];
+unsigned char headerbuf[128];
 
-int output_tap=1,use_labels=0;
+typedef enum { RAW, TAP, PLUS3DOS } OUTPUT_FORMAT;
+
+OUTPUT_FORMAT output_format=TAP;
+int use_labels=0;
 unsigned int startline=0x8000;
 int autostart=10,autoincr=2;
 char speccy_filename[11];
@@ -382,7 +385,7 @@ void usage_help()
 {
 printf("zmakebas - public domain by Russell Marks.\n\n");
 
-printf("usage: zmakebas [-hlr] [-a line] [-i incr] [-n speccy_filename]\n");
+printf("usage: zmakebas [-hlpr] [-a line] [-i incr] [-n speccy_filename]\n");
 printf("                [-o output_file] [-s line] [input_file]\n\n");
 
 printf("        -a      set auto-start line of basic file (default none).\n");
@@ -392,6 +395,7 @@ printf("        -l      use labels rather than line numbers.\n");
 printf("        -n      set Spectrum filename (to be given in tape header).");
 printf("\n        -o      specify output file (default `%s').\n",
 						DEFAULT_OUTPUT);
+printf("        -p      output +3DOS file (default is .tap file).\n");            
 printf("        -r      output raw headerless file (default is .tap file).\n");
 printf("        -s      in labels mode, set starting line number ");
 printf("(default 10).\n");
@@ -409,7 +413,7 @@ opterr=0;
 startlabel[0]=0;
 
 do
-  switch(getopt(argc,argv,"a:hi:ln:o:rs:"))
+  switch(getopt(argc,argv,"a:hi:ln:o:prs:"))
     {
     case 'a':
       if(*optarg=='@')
@@ -445,8 +449,10 @@ do
     case 'o':
       strcpy(outfile,optarg);
       break;
+    case 'p':	/* output plus3dos */
+      output_format=PLUS3DOS; break;      
     case 'r':	/* output raw file */
-      output_tap=0; break;
+      output_format=RAW; break;
     case 's':
       autostart=(int)atoi(optarg);
       if(autostart<0 || autostart>9999)
@@ -536,6 +542,7 @@ int textlinenum;
 int chk=0;
 int alttok;
 int passnum=1;
+unsigned int siz;
 FILE *in=stdin,*out=stdout;
 
 strcpy(speccy_filename,"");
@@ -997,36 +1004,65 @@ if(*startlabel)
 if(strcmp(outfile,"-")!=0 && (out=fopen(outfile,"wb"))==NULL)
   fprintf(stderr,"Couldn't open output file.\n"),exit(1);
 
-if(output_tap)
+switch(output_format)
   {
-  unsigned int siz=fileptr-filebuf;
+case PLUS3DOS:
+    siz=fileptr-filebuf;
   
-  /* make header */
-  headerbuf[0]=0;
-  for(f=strlen(speccy_filename);f<10;f++)
-    speccy_filename[f]=32;
-  strncpy(headerbuf+1,speccy_filename,10);
-  headerbuf[11]=(siz&255);
-  headerbuf[12]=(siz/256);
-  headerbuf[13]=(startline&255);
-  headerbuf[14]=(startline/256);
-  headerbuf[15]=(siz&255);
-  headerbuf[16]=(siz/256);
+    /* make header */
+    memset(headerbuf, 0, sizeof headerbuf);
+    memcpy(headerbuf, "PLUS3DOS\032\001", 10);
+
+    headerbuf[11] =  (siz + 128)        & 255;
+    headerbuf[12] = ((siz + 128) >> 8)  & 255;
+    headerbuf[13] = ((siz + 128) >> 16) & 255;
+    headerbuf[14] = ((siz + 128) >> 24) & 255;
+    headerbuf[15] = 0;	/* BASIC */
+    headerbuf[16]=(siz&255);
+    headerbuf[17]=(siz/256);
+    headerbuf[18]=(startline&255);
+    headerbuf[19]=(startline/256);
+    headerbuf[20]=(siz&255);
+    headerbuf[21]=(siz/256);
   
-  /* write header */
-  fprintf(out,"%c%c%c",19,0,chk=0);
-  for(f=0;f<17;f++) chk^=headerbuf[f];
-  fwrite(headerbuf,1,17,out);
-  fputc(chk,out);
+    chk = 0;
+    for (f=0;f<127;f++) chk += headerbuf[f];
+    fwrite(headerbuf,1,127,out);
+    fputc(chk,out);
+    break;
+case TAP:
+    siz=fileptr-filebuf;
   
-  /* write (most of) tap bit for data block */
-  fprintf(out,"%c%c%c",(siz+2)&255,(siz+2)>>8,chk=255);
-  for(f=0;f<siz;f++) chk^=filebuf[f];
+     /* make header */
+    headerbuf[0]=0;
+    for(f=strlen(speccy_filename);f<10;f++)
+      speccy_filename[f]=32;
+    strncpy(headerbuf+1,speccy_filename,10);
+    headerbuf[11]=(siz&255);
+    headerbuf[12]=(siz/256);
+    headerbuf[13]=(startline&255);
+    headerbuf[14]=(startline/256);
+    headerbuf[15]=(siz&255);
+    headerbuf[16]=(siz/256);
+    
+    /* write header */
+    fprintf(out,"%c%c%c",19,0,chk=0);
+    for(f=0;f<17;f++) chk^=headerbuf[f];
+    fwrite(headerbuf,1,17,out);
+    fputc(chk,out);
+    
+    /* write (most of) tap bit for data block */
+    fprintf(out,"%c%c%c",(siz+2)&255,(siz+2)>>8,chk=255);
+    for(f=0;f<siz;f++) chk^=filebuf[f];
+    break;
+
+    case RAW:
+    break;
   }
 
 fwrite(filebuf,1,fileptr-filebuf,out);
 
-if(output_tap)
+if(output_format == TAP)
   fputc(chk,out);
 
 if(out!=stdout) fclose(out);
