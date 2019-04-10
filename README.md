@@ -1,6 +1,5 @@
-zmakebas 1.1 - convert text files into Spectrum Basic programs.
-Public domain by Russell Marks.
-
+zmakebas
+--------
 
 Description
 -----------
@@ -11,7 +10,7 @@ headerless file).
 
 Using zmakebas rather than (say) writing the Basic in an emulator
 means you can write using a nicer editor, and can use tools which work
-on text files, etc. Also, with the `-l' option you can write without
+on text files, etc. Also, with the `-l` option you can write without
 line numbers, using labels in their place where necessary.
 
 The program was originally intended to be used simply to make little
@@ -26,7 +25,7 @@ Installation
 
 While I think zmakebas should be fairly portable, I've only ever
 compiled it on Linux and MS-DOS. Things should be ok for Linux as-is -
-just do `make' then (as root) `make install'.
+just do `make` then (as root) `make install`.
 
 
 Miscellaneous
@@ -35,10 +34,10 @@ Miscellaneous
 See the man page for details of how to use zmakebas.
 
 There's a short demo file showing the use of escape sequences for UDGs
-and block graphics characters etc. here, named `demo.bas'. You can use
-`zmakebas demo.bas' to generate an `out.tap' file from it. A version
-using labels is in `demolbl.bas', which can be converted with
-`zmakebas -l demolbl.bas'.
+and block graphics characters etc. here, named `demo.bas`. You can use
+`zmakebas demo.bas` to generate an `out.tap` file from it. A version
+using labels is in `demolbl.bas`, which can be converted with
+`zmakebas -l demolbl.bas`.
 
 
 Contacting me
