@@ -25,8 +25,8 @@
 
 #define DEFAULT_OUTPUT		"out.tap"
 
-#define REM_TOKEN_NUM		234
-#define BIN_TOKEN_NUM		196
+#define REM_TOKEN_NUM		(const char)(234)
+#define BIN_TOKEN_NUM		(const char)(196)
 
 /* tokens are stored (and looked for) in reverse speccy-char-set order,
  * to avoid def fn/fn and go to/to screwups. There are two entries for
@@ -139,18 +139,18 @@ char *tokens[] = {
 
 #ifdef MSDOS
 #define MAX_LABELS  500
-unsigned char filebuf[32768];
+char filebuf[32768];
 char infile[256], outfile[256];
 #else
 #define MAX_LABELS  2000
-unsigned char filebuf[49152];
+char filebuf[49152];
 char infile[1024], outfile[1024];
 #endif
 
 #define MAX_LABEL_LEN	16
 
 /* this is needed for tap files too: */
-unsigned char headerbuf[128];
+char headerbuf[128];
 
 typedef enum { RAW, TAP, PLUS3DOS } OUTPUT_FORMAT;
 
@@ -158,13 +158,13 @@ OUTPUT_FORMAT output_format = TAP;
 int use_labels = 0;
 unsigned int startline = 0x8000;
 int autostart = 10, autoincr = 2;
-unsigned char speccy_filename[11];
+char speccy_filename[11];
 
 int labelend = 0;
-unsigned char labels[MAX_LABELS][MAX_LABEL_LEN + 1];
+char labels[MAX_LABELS][MAX_LABEL_LEN + 1];
 int label_lines[MAX_LABELS];
 
-unsigned char startlabel[MAX_LABEL_LEN + 1];
+char startlabel[MAX_LABEL_LEN + 1];
 
 
 #ifndef HAVE_GETOPT
@@ -313,9 +313,9 @@ int dbl2spec(double num, int *pexp, unsigned long *pman) {
 }
 
 
-unsigned long grok_hex(unsigned char **ptrp, int textlinenum) {
+unsigned long grok_hex(char **ptrp, int textlinenum) {
 	static char *hexits = "0123456789abcdefABCDEF", *lookup;
-	unsigned char *ptr = *ptrp;
+	char *ptr = *ptrp;
 	unsigned long v = 0, n;
 
 	/* we know the number starts with "0x" and we're pointing to it */
@@ -338,9 +338,9 @@ unsigned long grok_hex(unsigned char **ptrp, int textlinenum) {
 }
 
 
-unsigned long grok_binary(unsigned char **ptrp, int textlinenum) {
+unsigned long grok_binary(char **ptrp, int textlinenum) {
 	unsigned long v = 0;
-	unsigned char *ptr = *ptrp;
+	char *ptr = *ptrp;
 
 	while(isspace(*ptr)) ptr++;
 
@@ -480,7 +480,7 @@ void parse_options(int argc, char *argv[]) {
 }
 
 
-int grok_block(unsigned char *ptr, int textlinenum) {
+int grok_block(char *ptr, int textlinenum) {
 	static char *lookup[] = {
 		"  ", " '", "' ", "''", " .", " :", "'.", "':",
 		". ", ".'", ": ", ":'", "..", ".:", ":.", "::",
@@ -508,13 +508,13 @@ int grok_block(unsigned char *ptr, int textlinenum) {
 
 int main(int argc, char *argv[]) {
 #ifdef MSDOS
-	static unsigned char buf[512], lcasebuf[512], outbuf[1024];
+	static char buf[512], lcasebuf[512], outbuf[1024];
 #else
-	static unsigned char buf[2048], lcasebuf[2048], outbuf[4096];
+	static char buf[2048], lcasebuf[2048], outbuf[4096];
 #endif
 	int f, toknum, toklen, linenum, linelen, in_quotes, in_rem, lastline;
 	char **tarrptr;
-	unsigned char *ptr, *ptr2, *linestart, *outptr, *remptr, *fileptr, *asciiptr;
+	char *ptr, *ptr2, *linestart, *outptr, *remptr, *fileptr, *asciiptr;
 	double num;
 	int num_exp;
 	unsigned long num_mantissa, num_ascii;
@@ -756,7 +756,7 @@ int main(int argc, char *argv[]) {
 						int len = strlen(labels[f]);
 						if(memcmp(labels[f], ptr, len) == 0 &&
 								(ptr[len] < 33 || ptr[len] > 126 || ptr[len] == ':')) {
-							unsigned char numbuf[20];
+							char numbuf[20];
 
 							/* this could be optimised to use a single memmove(), but
 							 * at least this way it's clear(er) what's happening.
