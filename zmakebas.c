@@ -27,12 +27,18 @@
 
 #define REM_TOKEN_NUM		234
 #define BIN_TOKEN_NUM		196
+#define VAL_TOKEN_NUM		176
+#define VALSTR_TOKEN_NUM	174
+#define DEFFN_TOKEN_NUM		206
 
 /* tokens are stored (and looked for) in reverse speccy-char-set order,
  * to avoid def fn/fn and go to/to screwups. There are two entries for
  * each token - this is to allow for things like "go to" which can
  * actually be entered (thank ghod) as "goto". The one extension to
  * this I've made is that randomize can be entered with -ize or -ise.
+ *
+ * One exception to the above - VAL/VAL$ positions are flipped here
+ * so that we do VAL$ first, and swapped after tokenising.
  */
 char *tokens[]=
   {
@@ -115,9 +121,9 @@ char *tokens[]=
   "cos", "",
   "sin", "",
   "len", "",
-  "val", "",
-  "code", "",
   "val$", "",
+  "code", "",
+  "val", "",
   "tab", "",
   "at", "",
   "attr", "",
@@ -151,7 +157,7 @@ char infile[1024],outfile[1024];
 #define MAX_LABEL_LEN	16
 
 /* this is needed for tap files too: */
-unsigned char headerbuf[128];
+unsigned char headerbuf[17];
 
 typedef enum { RAW, TAP, PLUS3DOS } OUTPUT_FORMAT;
 
@@ -383,7 +389,7 @@ return(v);
 
 void usage_help()
 {
-printf("zmakebas - public domain by Russell Marks.\n\n");
+printf("zmakebas 1.2b - public domain by Russell Marks.\n\n");
 
 printf("usage: zmakebas [-hlpr] [-a line] [-i incr] [-n speccy_filename]\n");
 printf("                [-o output_file] [-s line] [input_file]\n\n");
@@ -447,7 +453,10 @@ do
       speccy_filename[10]=0;
       break;
     case 'o':
-      strcpy(outfile,optarg);
+      if(strlen(optarg)>sizeof(outfile)-1)
+        fprintf(stderr,"Filename too long\n"),exit(1);
+      else
+        strcpy(outfile,optarg);
       break;
     case 'p':	/* output plus3dos */
       output_format=PLUS3DOS; break;      
@@ -490,7 +499,12 @@ if(optind<argc-1)	/* two or more remaining args */
   usage_help(),exit(1);
 
 if(optind==argc-1)	/* one remaining arg */
-  strcpy(infile,argv[optind]);
+  {
+  if(strlen(argv[optind])>sizeof(infile)-1)
+    fprintf(stderr,"Filename too long\n"),exit(1);
+  else
+    strcpy(infile,argv[optind]);
+  }
 }
 
 
@@ -530,9 +544,19 @@ int main(int argc,char *argv[])
 #ifdef MSDOS
 static unsigned char buf[512],lcasebuf[512],outbuf[1024];
 #else
-static unsigned char buf[2048],lcasebuf[2048],outbuf[4096];
+/* deliberately very large buffers, to allow e.g. embedding of m/c
+ * programs in REM statements. 48k*8 should cover all eventualities,
+ * and not generally be a problem at this point. I mean, it's not
+ * even a megabyte in total, what's that between friends? :-)
+ *
+ * Note that these need to be large even if line-continuation
+ * backslashes are used, as the line is constructed in buf[]. outbuf
+ * is in the Spectrum's tokenised format, and can be much smaller.
+ */
+static unsigned char buf[8*49152],lcasebuf[8*49152];
+static unsigned char outbuf[49152];
 #endif
-int f,toknum,toklen,linenum,linelen,in_quotes,in_rem,lastline;
+int f,toknum,toklen,linenum,linelen,in_quotes,in_rem,in_deffn,lastline;
 char **tarrptr;
 unsigned char *ptr,*ptr2,*linestart,*outptr,*remptr,*fileptr,*asciiptr;
 double num;
@@ -583,13 +607,20 @@ do
      */
     if(buf[1]==0 || buf[1]=='#') continue;
     
-    /* check for line continuation */
-    while(buf[strlen(buf)-1]=='\\')
+    /* check for line continuation; the "*buf" checks here aren't strictly
+     * necessary (see buf[0] above) but I'm just happier this way. :-)
+     */
+    while(*buf && buf[strlen(buf)-1]=='\\' && !feof(in))
       {
       f=strlen(buf)-1;
-      fgets(buf+f,sizeof(buf)-f,in);
-      textlinenum++;
-      if(buf[strlen(buf)-1]=='\n') buf[strlen(buf)-1]=0;
+      if(fgets(buf+f,sizeof(buf)-f,in))
+        textlinenum++;
+      else
+        {
+        if(*buf) buf[strlen(buf)-1]=0;	/* remove backslash on EOF */
+        }
+      
+      if(*buf && buf[strlen(buf)-1]=='\n') buf[strlen(buf)-1]=0;
       }
     
     if(strlen(buf)>=sizeof(buf)-MAX_LABEL_LEN-1)
@@ -739,6 +770,11 @@ do
       {
       if(alttok) toknum--;
       alttok=!alttok;
+      switch(toknum)
+        {
+        case VAL_TOKEN_NUM: toknum=VALSTR_TOKEN_NUM; break;
+        case VALSTR_TOKEN_NUM: toknum=VAL_TOKEN_NUM;
+        }
       if(**tarrptr==0) continue;
       toklen=strlen(*tarrptr);
       ptr=lcasebuf;
@@ -804,7 +840,7 @@ do
           if(memcmp(labels[f],ptr,len)==0 &&
             (ptr[len]<33 || ptr[len]>126 || ptr[len]==':'))
             {
-            unsigned char numbuf[20];
+            static unsigned char numbuf[64];
             
             /* this could be optimised to use a single memmove(), but
              * at least this way it's clear(er) what's happening.
@@ -835,7 +871,7 @@ do
     /* remove 0x01s, deal with backslash things, and add numbers */
     ptr=linestart;
     outptr=outbuf;
-    in_rem=in_quotes=0;
+    in_rem=in_deffn=in_quotes=0;
     
     while(*ptr)
       {
@@ -853,6 +889,8 @@ do
         ptr++;
         continue;
         }
+      
+      if(*ptr==DEFFN_TOKEN_NUM) in_deffn=1;
       
       if(*ptr==REM_TOKEN_NUM) in_rem=1;
       
@@ -948,8 +986,38 @@ do
         }
       else
         {
-        /* if not number, just output char */
-        *outptr++=*ptr++;
+        /* special def fn case */
+        if(in_deffn)
+          {
+          if(*ptr=='=')
+            in_deffn=0;
+          else
+            {
+            if(*ptr==',' || *ptr==')')
+              {
+              *outptr++=0x0e;
+              *outptr++=0;
+              *outptr++=0;
+              *outptr++=0;
+              *outptr++=0;
+              *outptr++=0;
+              *outptr++=*ptr++;
+              }
+            
+            if(*ptr!=' ')
+              {
+              if(*ptr=='=')
+                in_deffn=0;
+              
+              *outptr++=*ptr++;
+              }
+            }
+          }
+        else
+          {
+          /* if not number, just output char */
+          *outptr++=*ptr++;
+          }
         }
       }
     
