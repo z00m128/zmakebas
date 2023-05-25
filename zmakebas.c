@@ -157,7 +157,7 @@ char infile[1024],outfile[1024];
 #define MAX_LABEL_LEN	16
 
 /* this is needed for tap files too: */
-unsigned char headerbuf[17];
+unsigned char headerbuf[120];
 
 typedef enum { RAW, TAP, PLUS3DOS } OUTPUT_FORMAT;
 
