@@ -157,7 +157,7 @@ char infile[1024],outfile[1024];
 #define MAX_LABEL_LEN	16
 
 /* this is needed for tap files too: */
-unsigned char headerbuf[120];
+unsigned char headerbuf[128];
 
 typedef enum { RAW, TAP, PLUS3DOS } OUTPUT_FORMAT;
 
@@ -251,14 +251,14 @@ if(num==(long)num && num>=-65535.0 && num<=65535.0)
   {
   /* ignores sign - see below, which applies to ints too. */
   long tmp=(long)fabs(num);
-  
+
   exp=0;
   man=((tmp%256)<<16)|((tmp>>8)<<8);
   }
 else
   {
   int f;
-  
+
   /* It appears that the sign bit is always left as 0 when floating-point
    * numbers are embedded in programs, and the speccy appears to use the
    * '-' character to detemine negativity - tests confirm this.
@@ -266,11 +266,11 @@ else
    * exp is 0x80+exponent.
    */
   num=fabs(num);
-  
+
   /* binary standard form goes from 0.50000... to 0.9999...(dec), like
    * decimal which goes from        0.10000... to 0.9999....
    */
-  
+
   /* as such, if the number is >=1, it gets divided by 2, and exp++.
    * And if the number is <0.5, it gets multiplied by 2, and exp--.
    */
@@ -289,19 +289,19 @@ else
    * we check the range of exp... -128 <= exp <= 127.
    * (if outside, we return error (i.e. 0))
    */
-   
+
   if(exp<-128 || exp>127) return(0);
-    
+
   exp=128+exp;
-  
+
   /* so now all we need to do is roll the bits off the mantissa in `num'.
    * we start at the 0.5ths bit at bit 0, and shift left 1 each time
    * round the loop.
    */
-  
+
   num*=2.0;  /* make it so that the 0.5ths bit is the integer part, */
 	     /* and the rest is the fractional (0.xxx) part. */
-  
+
   man=0;
   for(f=0;f<32;f++)
     {
@@ -315,9 +315,9 @@ else
    * round up 1. We don't do this if it would cause an overflow in the
    * mantissa, though.
    */
-   
+
   if((int)num && man!=0xFFFFFFFF) man++;
-    
+
   /* finally, zero out the top bit */
   man&=0x7FFFFFFF;
   }
@@ -401,7 +401,7 @@ printf("        -l      use labels rather than line numbers.\n");
 printf("        -n      set Spectrum filename (to be given in tape header).");
 printf("\n        -o      specify output file (default `%s').\n",
 						DEFAULT_OUTPUT);
-printf("        -p      output +3DOS file (default is .tap file).\n");            
+printf("        -p      output +3DOS file (default is .tap file).\n");
 printf("        -r      output raw headerless file (default is .tap file).\n");
 printf("        -s      in labels mode, set starting line number ");
 printf("(default 10).\n");
@@ -459,7 +459,7 @@ do
         strcpy(outfile,optarg);
       break;
     case 'p':	/* output plus3dos */
-      output_format=PLUS3DOS; break;      
+      output_format=PLUS3DOS; break;
     case 'r':	/* output raw file */
       output_format=RAW; break;
     case 's':
@@ -518,7 +518,7 @@ static char *lookup[]=
   };
 char **lptr;
 int f=128,v=-1;
-            
+
 for(lptr=lookup;*lptr!=NULL;lptr++,f++)
   {
   if(strncmp(ptr+1,*lptr,2)==0)
@@ -593,20 +593,20 @@ do
     fprintf(stderr,"Need seekable input for label support\n");
     exit(1);
     }
-  
+
   while(fgets(buf+1,sizeof(buf)-1,in)!=NULL)
     {
     buf[0]=32;		/* just in case, for all the ptr[-1] stuff */
     textlinenum++;
     lastline=linenum;
-    
+
     if(buf[strlen(buf)-1]=='\n') buf[strlen(buf)-1]=0;
-    
+
     /* allow for (shell-style) comments which don't appear in the program,
      * and also ignore blank lines.
      */
     if(buf[1]==0 || buf[1]=='#') continue;
-    
+
     /* check for line continuation; the "*buf" checks here aren't strictly
      * necessary (see buf[0] above) but I'm just happier this way. :-)
      */
@@ -619,10 +619,10 @@ do
         {
         if(*buf) buf[strlen(buf)-1]=0;	/* remove backslash on EOF */
         }
-      
+
       if(*buf && buf[strlen(buf)-1]=='\n') buf[strlen(buf)-1]=0;
       }
-    
+
     if(strlen(buf)>=sizeof(buf)-MAX_LABEL_LEN-1)
       {
       /* this is nasty, but given how the label substitution works it's
@@ -631,7 +631,7 @@ do
       fprintf(stderr,"line %d: line too big for input buffer\n",textlinenum);
       exit(1);
       }
-    
+
     /* get line number (or assign one) */
     if(use_labels)
       {
@@ -654,7 +654,7 @@ do
         exit(1);
         }
       linenum=(int)strtol(ptr,(char **)&linestart,10);
-    
+
       if(linenum<=lastline)
         {
         fprintf(stderr,"line %d: line no. not greater than previous one\n",
@@ -662,16 +662,16 @@ do
         exit(1);
         }
       }
-    
+
     if(linenum<0 || linenum>9999)
       {
       fprintf(stderr,"line %d: line no. out of range\n",textlinenum);
       exit(1);
       }
-    
+
     /* lose remaining spaces */
     while(isspace(*linestart)) linestart++;
-    
+
     /* check there's no line numbers on label-using programs */
     if(use_labels && isdigit(*linestart))
       {
@@ -679,7 +679,7 @@ do
       	textlinenum);
       exit(1);
       }
-    
+
     if(use_labels && *linestart=='@')
       {
       if((ptr=strchr(linestart,':'))==NULL)
@@ -710,10 +710,10 @@ do
             }
         *ptr=':';
         }
-      
+
       linestart=ptr+1;
       while(isspace(*linestart)) linestart++;
-      
+
       /* if now blank, don't bother inserting an actual line here;
        * instead, fiddle linenum so the next line will have the
        * same number.
@@ -724,9 +724,9 @@ do
         continue;
         }
       }
-    
+
     if(use_labels && passnum==1) continue;
-    
+
     /* make token comparison copy of line. this has lowercase letters and
      * blanked-out strings.
      */
@@ -742,7 +742,7 @@ do
       ptr++;
       }
     *ptr2=0;
-    
+
     /* now convert any token without letters either side to the correct
      * speccy token number. (Any space this leaves in the string is replaced
      * by 0x01 chars.)
@@ -751,7 +751,7 @@ do
      * is performed on the line after that point.
      */
     remptr=NULL;
-    
+
     if((ptr=strstr(lcasebuf,"rem"))!=NULL &&
        !isalpha(ptr[-1]) && !isalpha(ptr[3]))
       {
@@ -764,7 +764,7 @@ do
       /* absorb at most one trailing space */
       if(ptr[3]==' ') ptr2[3]=ptr[3]=1;
       }
-    
+
     toknum=256; alttok=1;
     for(tarrptr=tokens;*tarrptr!=NULL;tarrptr++)
       {
@@ -795,7 +795,7 @@ do
           /* absorb trailing spaces too */
           while(ptr2[f]==' ')
             ptr2[f++]=1;
-          
+
           /* for BIN, we need the token right before the number. */
           if(toknum==BIN_TOKEN_NUM)
             {
@@ -803,11 +803,11 @@ do
             ptr2[f-1]=ptr[f-1]=toknum;
             }
           }
-        
+
         ptr+=toklen;
         }
       }
-    
+
     if(use_labels)
       {
       /* replace @label with matching number.
@@ -816,7 +816,7 @@ do
        * 2. it makes the code a bit simpler :-) ;
        * 3. you can use the escape `\@' to get a literal `@' anyway.
        */
-      
+
       ptr=linestart;
       while((ptr=strchr(ptr,'@'))!=NULL)
         {
@@ -825,7 +825,7 @@ do
           ptr++;
           continue;
           }
-        
+
         /* the easiest way to spot them is to try matching against
          * each label in turn. It's gross, but at least it's sane
          * and doesn't restrict what you can have as a label.
@@ -841,7 +841,7 @@ do
             (ptr[len]<33 || ptr[len]>126 || ptr[len]==':'))
             {
             static unsigned char numbuf[64];
-            
+
             /* this could be optimised to use a single memmove(), but
              * at least this way it's clear(er) what's happening.
              */
@@ -865,14 +865,14 @@ do
           }
         }
       }
-    
+
     if(remptr) *remptr=REM_TOKEN_NUM;
-    
+
     /* remove 0x01s, deal with backslash things, and add numbers */
     ptr=linestart;
     outptr=outbuf;
     in_rem=in_deffn=in_quotes=0;
-    
+
     while(*ptr)
       {
       if(outptr>outbuf+sizeof(outbuf)-10)
@@ -880,20 +880,20 @@ do
         fprintf(stderr,"line %d: line too big\n",textlinenum);
         exit(1);
         }
-      
+
       if(*ptr=='"') in_quotes=!in_quotes;
-      
+
       /* as well as 0x01 chars, we skip tabs. */
       if(*ptr==1 || *ptr==9 || (!in_quotes && !in_rem && *ptr==' '))
         {
         ptr++;
         continue;
         }
-      
+
       if(*ptr==DEFFN_TOKEN_NUM) in_deffn=1;
-      
+
       if(*ptr==REM_TOKEN_NUM) in_rem=1;
-      
+
       if(*ptr=='\\')
         {
         if(isalpha(ptr[1]) && strchr("VWXYZvwxyz",ptr[1])==NULL)
@@ -942,7 +942,7 @@ do
         ptr+=2;
         continue;
         }
-      
+
       /* spot any numbers (because we have to add the inline FP
        * representation). We do this largely by relying on strtod(),
        * so that we only have to find the start - i.e. a non-alpha char,
@@ -965,11 +965,11 @@ do
           ptr2=ptr;
           num=(double)grok_binary(&ptr2,textlinenum);
           }
-        
+
         /* output text of number */
         memcpy(outptr,ptr,ptr2-ptr);
         outptr+=ptr2-ptr;
-        
+
         *outptr++=0x0e;
         if(!dbl2spec(num,&num_exp,&num_mantissa))
           {
@@ -1003,12 +1003,12 @@ do
               *outptr++=0;
               *outptr++=*ptr++;
               }
-            
+
             if(*ptr!=' ')
               {
               if(*ptr=='=')
                 in_deffn=0;
-              
+
               *outptr++=*ptr++;
               }
             }
@@ -1020,9 +1020,9 @@ do
           }
         }
       }
-    
+
     *outptr++=0x0d;	/* add terminating CR */
-    
+
     /* output line */
     linelen=outptr-outbuf;
     if(fileptr+4+linelen>=filebuf+sizeof(filebuf))
@@ -1040,7 +1040,7 @@ do
     memcpy(fileptr,outbuf,linelen);
     fileptr+=linelen;
     }	/* end of pass-making while() */
-  
+
   passnum++;
   }	/* end of do..while() pass loop */
 while(use_labels && passnum<=2);
@@ -1076,7 +1076,7 @@ switch(output_format)
   {
 case PLUS3DOS:
     siz=fileptr-filebuf;
-  
+
     /* make header */
     memset(headerbuf, 0, sizeof headerbuf);
     memcpy(headerbuf, "PLUS3DOS\032\001", 10);
@@ -1092,7 +1092,7 @@ case PLUS3DOS:
     headerbuf[19]=(startline/256);
     headerbuf[20]=(siz&255);
     headerbuf[21]=(siz/256);
-  
+
     chk = 0;
     for (f=0;f<127;f++) chk += headerbuf[f];
     fwrite(headerbuf,1,127,out);
@@ -1100,7 +1100,7 @@ case PLUS3DOS:
     break;
 case TAP:
     siz=fileptr-filebuf;
-  
+
      /* make header */
     headerbuf[0]=0;
     for(f=strlen(speccy_filename);f<10;f++)
@@ -1112,13 +1112,13 @@ case TAP:
     headerbuf[14]=(startline/256);
     headerbuf[15]=(siz&255);
     headerbuf[16]=(siz/256);
-    
+
     /* write header */
     fprintf(out,"%c%c%c",19,0,chk=0);
     for(f=0;f<17;f++) chk^=headerbuf[f];
     fwrite(headerbuf,1,17,out);
     fputc(chk,out);
-    
+
     /* write (most of) tap bit for data block */
     fprintf(out,"%c%c%c",(siz+2)&255,(siz+2)>>8,chk=255);
     for(f=0;f<siz;f++) chk^=filebuf[f];
