@@ -389,7 +389,7 @@ return(v);
 
 void usage_help()
 {
-printf("zmakebas 1.2b - public domain by Russell Marks.\n\n");
+printf("zmakebas 1.3.1 - public domain by Russell Marks.\n\n");
 
 printf("usage: zmakebas [-hlpr] [-a line] [-i incr] [-n speccy_filename]\n");
 printf("                [-o output_file] [-s line] [input_file]\n\n");
