@@ -493,7 +493,7 @@ long is_number(char *string)
 
 void usage_help()
 {
-printf("zmakebas 1.3.1 - public domain by Russell Marks.\n\n");
+printf("zmakebas 1.3.2 - public domain by Russell Marks.\n\n");
 
 printf("usage: zmakebas [-hlpr] [-a line] [-i incr] [-n speccy_filename]\n");
 printf("                [-o output_file] [-q line] [-s line] [input_file]\n\n");
@@ -506,6 +506,7 @@ printf("\n        -o      specify output file (default `%s').\n",
 						DEFAULT_OUTPUT);
 printf("        -p      output +3DOS file (default is .tap file).\n");
 printf("        -q      convert tokens within quotes per line number (for VAL$).\n");
+printf("                   If line number is 0, then tokenize within quotes globally.\n");
 printf("        -r      output raw headerless file (default is .tap file).\n");
 printf("        -s      in labels mode, set starting line number ");
 printf("(default 10).\n");
