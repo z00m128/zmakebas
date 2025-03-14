@@ -16,6 +16,7 @@
 #endif
 #include <math.h>
 #include <ctype.h>
+#include <errno.h>
 
 
 #if defined(__TURBOC__) && !defined(MSDOS)
@@ -172,6 +173,24 @@ unsigned char labels[MAX_LABELS][MAX_LABEL_LEN+1];
 int label_lines[MAX_LABELS];
 
 unsigned char startlabel[MAX_LABEL_LEN+1];
+
+/* Tokenize within quotes - globals (start) */
+#define MAX_LINE_NUMBER_LEN 4         /* 9999 is the longest (4 chars).   */
+int quot_tok_global=0;
+int quot_tok_line_number_count = 0;   /* use as a global for linked list. */
+
+struct Node
+{
+    int number;
+    struct Node *next;
+};
+
+typedef struct Node Node;
+
+Node *head = NULL;
+Node *curr = NULL;
+/* Tokenize within quotes - globals (end) */
+
 
 
 #ifndef HAVE_GETOPT
@@ -387,13 +406,97 @@ return(v);
 }
 
 
+Node* quot_tok_list_add_no_dupes(char* word) {
+    Node* tmp = head;
+
+    while (tmp) {
+        if (tmp->number == (int)atoi(word)) {
+            return tmp; /* reject duplicate line number */
+        }
+        tmp = tmp->next;
+    }
+    Node *ptr = malloc(sizeof(Node));
+    ptr->next = NULL;
+    ptr->number = (int)atoi(word);
+
+
+    if (head)
+        curr->next=ptr;
+    else
+        head = ptr;
+    curr = ptr;
+
+    return ptr;
+}
+
+
+int quot_tok_list_search(int current_line_number)
+{
+    Node *ptr = head;
+    int found=0;
+
+    while (ptr)
+    {
+        if (current_line_number == ptr->number)
+        {
+            found = 1;
+            printf("found\n");
+            break;
+        }
+        else 
+        {
+            ptr = ptr->next;
+        }
+    }
+    return found;
+}
+
+
+void quot_tok_list_free() {
+  Node* ptr = head;
+  Node* tmp = 0;
+  while(ptr) 
+  {
+    tmp = ptr->next;
+    free(ptr);
+    ptr = tmp;
+  }
+}
+
+
+int is_current_line(int current_line_number){
+  return quot_tok_list_search(current_line_number);
+}
+
+
+/* return zero for non-number */
+/* return 1 for number        */
+long is_number(char *string)
+{
+    char *end;
+    errno = 0;
+
+    long size = strtol(string, &end, 10);
+
+    while (isspace(*end))
+      ++end;
+    if (errno || *end) 
+    {
+        /* an error occurred on conversion, or                      */
+        /* there is extra cruft, after a number in the argument.    */
+        return 0; 
+    }
+    else
+        return 1;
+}
+
+
 void usage_help()
 {
 printf("zmakebas 1.3.1 - public domain by Russell Marks.\n\n");
 
 printf("usage: zmakebas [-hlpr] [-a line] [-i incr] [-n speccy_filename]\n");
-printf("                [-o output_file] [-s line] [input_file]\n\n");
-
+printf("                [-o output_file] [-q line] [-s line] [input_file]\n\n");
 printf("        -a      set auto-start line of basic file (default none).\n");
 printf("        -h      give this usage help.\n");
 printf("        -i      in labels mode, set line number incr. (default 2).\n");
@@ -402,6 +505,7 @@ printf("        -n      set Spectrum filename (to be given in tape header).");
 printf("\n        -o      specify output file (default `%s').\n",
 						DEFAULT_OUTPUT);
 printf("        -p      output +3DOS file (default is .tap file).\n");
+printf("        -q      convert tokens within quotes per line number (for VAL$).\n");
 printf("        -r      output raw headerless file (default is .tap file).\n");
 printf("        -s      in labels mode, set starting line number ");
 printf("(default 10).\n");
@@ -419,7 +523,7 @@ opterr=0;
 startlabel[0]=0;
 
 do
-  switch(getopt(argc,argv,"a:hi:ln:o:prs:"))
+  switch(getopt(argc,argv,"a:hi:ln:o:pq:rs:"))
     {
     case 'a':
       if(*optarg=='@')
@@ -460,6 +564,21 @@ do
       break;
     case 'p':	/* output plus3dos */
       output_format=PLUS3DOS; break;
+    case 'q':	/* all tokens (even in quotes) */
+      if(!is_number(optarg) || strlen(optarg)>MAX_LINE_NUMBER_LEN
+         || (int)atoi(optarg)<0 || (int)atoi(optarg)>9999)
+        fprintf(stderr,"Line number must be in the range 0 to 9999.\nSee usage for help\n\t\t% zmakebas -h\n"),
+          exit(1);
+      if (!quot_tok_global)              /* If global search not set... */
+        quot_tok_global=(*optarg=='0');  /* ... see if we can set it.   */
+      if (!quot_tok_global)
+      {
+        /* Only add line number to linked list, if optarg is not 0...    */
+        /* and global search hasn't already been set               */
+        quot_tok_list_add_no_dupes(optarg);
+        quot_tok_line_number_count++;
+      }
+      break;
     case 'r':	/* output raw file */
       output_format=RAW; break;
     case 's':
@@ -482,6 +601,9 @@ do
           break;
         case 'o':
           fprintf(stderr,"The `o' option takes a filename arg.\n");
+          break;
+        case 'q':
+          fprintf(stderr,"The `q' option takes a line number arg.\nSee usage for help\n\t\t% zmakebas -h\n");
           break;
         case 's':
           fprintf(stderr,"The `s' option takes a line number arg.\n");
@@ -735,7 +857,10 @@ do
     while(*ptr)
       {
       if(*ptr=='"') in_quotes=!in_quotes;
-      if(in_quotes && *ptr!='"')
+      /* do it in this order, to "short circuit" the logic and     */
+      /* to avoid running the slow search function, islinenumber() */
+      if(in_quotes && *ptr!='"' && !(quot_tok_global || (quot_tok_line_number_count  && is_current_line(linenum))))
+      /* additional short circuit (quot_tok_line_number_count) for LList performance. */
         *ptr2++=32;
       else
         *ptr2++=tolower(*ptr);
@@ -1134,6 +1259,8 @@ if(output_format == TAP)
   fputc(chk,out);
 
 if(out!=stdout) fclose(out);
+
+quot_tok_list_free();
 
 exit(0);
 }
