@@ -564,7 +564,9 @@ void parse_options(int argc, char *argv[]) {
       case '?':
         switch (optopt) {
           case 'a':
-            fprintf(stderr, "The `a' option takes a line number arg.\n");
+          case 'q':
+          case 's':
+            fprintf(stderr,"The `%c' option takes a line number arg.\n", optopt);
             break;
           case 'i':
             fprintf(stderr, "The `i' option takes a line incr. arg.\n");
@@ -574,12 +576,6 @@ void parse_options(int argc, char *argv[]) {
             break;
           case 'o':
             fprintf(stderr, "The `o' option takes a filename arg.\n");
-            break;
-          case 'q':
-            fprintf(stderr, "The `q' option takes a line number arg.\nSee usage for help\n\t\t% zmakebas -h\n");
-            break;
-          case 's':
-            fprintf(stderr, "The `s' option takes a line number arg.\n");
             break;
           default:
             fprintf(stderr, "Option `%c' not recognised.\n", optopt);
