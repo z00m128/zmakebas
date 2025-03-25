@@ -474,7 +474,7 @@ void usage_help() {
   printf("                [-o output_file] [-q line] [-s line] [input_file]\n\n");
   printf("        -a      set auto-start line of basic file (default none).\n");
   printf("        -h      give this usage help.\n");
-  printf("        -i      in labels mode, set line number incr. (default 2).\n");
+  printf("        -i      in labels mode, set line number increment.\n");
   printf("        -l      use labels rather than line numbers.\n");
   printf("        -n      set Spectrum filename (to be given in tape header).");
   printf("\n        -o      specify output file (default `%s').\n",
@@ -484,7 +484,6 @@ void usage_help() {
   printf("                   If line number is 0, then tokenize within quotes globally.\n");
   printf("        -r      output raw headerless file (default is .tap file).\n");
   printf("        -s      in labels mode, set starting line number ");
-  printf("(default 10).\n");
 }
 
 
