@@ -468,7 +468,7 @@ long is_number(char *string) {
 
 
 void usage_help() {
-  printf("zmakebas 1.3.2 - public domain by Russell Marks.\n\n");
+  printf("zmakebas 1.3.3 - public domain by Russell Marks.\n\n");
 
   printf("usage: zmakebas [-hlpr] [-a line] [-i incr] [-n speccy_filename]\n");
   printf("                [-o output_file] [-q line] [-s line] [input_file]\n\n");
@@ -505,6 +505,9 @@ void parse_options(int argc, char *argv[]) {
           else
             strcpy(startlabel, optarg + 1);
         else {
+          if (!is_number(optarg))
+            fprintf(stderr, "Auto-start line must be in the range 0 to 9999.\n"),
+              exit(1);
           startline = (unsigned int)atoi(optarg);
           if (startline > 9999)
             fprintf(stderr, "Auto-start line must be in the range 0 to 9999.\n"),
@@ -515,6 +518,9 @@ void parse_options(int argc, char *argv[]) {
         usage_help();
         exit(1);
       case 'i':
+        if (!is_number(optarg))
+          fprintf(stderr, "Label line incr. must be in the range 1 to 1000.\n"),
+            exit(1);
         autoincr = (int)atoi(optarg);
         /* this is unnecessarily restrictive but keeps things a bit sane */
         if (autoincr < 1 || autoincr > 1000)
@@ -555,6 +561,9 @@ void parse_options(int argc, char *argv[]) {
         output_format = RAW;
         break;
       case 's':
+        if (!is_number(optarg))
+          fprintf(stderr, "Label start line must be in the range 0 to 9999.\n"),
+            exit(1);
         autostart = (int)atoi(optarg);
         if (autostart < 0 || autostart > 9999)
           fprintf(stderr, "Label start line must be in the range 0 to 9999.\n"),
